@@ -1,0 +1,29 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group 'de.vainock'
+version '7.0'
+
+task generateJar(type: Jar) {
+    sourceCompatibility = '1.8'
+    manifest {
+        attributes 'Main-Class': 'de.vainock.obscrowdinhelper.OBSCrowdinHelper'
+    }
+    from {
+        configurations.runtimeClasspath.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+    with jar
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1.1'
+    implementation group: 'com.squareup.okhttp3', name: 'okhttp', version: '4.8.1'
+}

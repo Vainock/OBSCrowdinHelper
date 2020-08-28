@@ -1,12 +1,24 @@
 ## OBSCrowdinHelper
-OBSCrowdinHelper is a simple Java tool to fetch the newest translations and translators from the [OBS Studio Crowdin project](https://crowdin.com/project/obs-studio).
+
+OBSCrowdinHelper is an easy-to-use Java tool to retrieve the newest translations and translators from the [OBS Studio Crowdin project](https://crowdin.com/project/obs-studio).
+
+To run the program in the terminal double-click the .jar file.
+
+### Features
+
+- Automatically build the project if the user is at least project manager.
+- Download the newest translations.
+- Sort-out untranslated files.
+- Generate a formatted file containing all project members sorted by language and contributions.
 
 ### Requirements
-- Java SE 1.6 or higher
-- Windows
-- A Crowdin Account
-<details><summary>Why does the program need my account credentials?</summary>
 
-The reason for this is quite simple:
-The program tries to view the [OBS Studio reports page](https://crowdin.com/project/obs-studio/reports) to retrieve its data but with no login it will be redirected to the login page. Because of that reason, OBSCrowdinHelper needs a valid Crowdin Account to be able to request the project translators.
-</details>
+- [Crowdin API v2 Personal Access Token](https://crowdin.com/settings#api-key) from a project manager or the owner
+- Java 1.8 or greater
+- Windows (only tested on there)
+
+### Build Instructions
+
+1. Download or clone the repository.
+2. Navigate to the directory with the terminal and run `gradlew.bat generateJar`.
+3. Go to `/build/libs/`.
