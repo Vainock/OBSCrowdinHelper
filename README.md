@@ -2,11 +2,11 @@
 
 OBSCrowdinHelper is an easy-to-use Java tool to retrieve the newest translations and translators from the [OBS Studio Crowdin project](https://crowdin.com/project/obs-studio).
 
-To run the program in the terminal double-click the .jar file.
+Run the program with a simple double-click which opens a terminal.
 
 ### Features
 
-- Automatically build the project if the user is at least project manager.
+- Automatically build the project.
 - Download the newest translations.
 - Sort-out untranslated files.
 - Generate a formatted file containing all project members sorted by language and contributions.
