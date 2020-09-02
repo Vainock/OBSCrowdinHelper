@@ -167,7 +167,7 @@ public class OBSCrowdinHelper {
           translatorsWriter.append(' ').append(lang).append(":\n");
           for (Object member : members) {
             String username =
-                ((JSONObject) ((JSONObject) member).get("user")).get("username").toString();
+                ((JSONObject) ((JSONObject) member).get("user")).get("fullName").toString();
             if (username.equals("REMOVED_USER")) {
               continue;
             }
