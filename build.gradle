@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'de.vainock'
-version '7.0'
+version '7.1'
 
 task generateJar(type: Jar) {
     sourceCompatibility = '1.8'
