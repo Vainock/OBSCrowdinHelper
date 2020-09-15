@@ -1,5 +1,6 @@
 package de.vainock.obscrowdinhelper.crowdin;
 
+import de.vainock.obscrowdinhelper.OBSCrowdinHelper;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -106,7 +107,7 @@ public class CrowdinRequest implements Runnable {
       }
       Request.Builder reqBuilder = new Request.Builder();
       reqBuilder.header("Authorization", "Bearer " + token);
-      reqBuilder.url("https://crowdin.com/api/v2/" + getPath());
+      reqBuilder.url("https://" + OBSCrowdinHelper.PROJECT_DOMAIN + "/api/v2/" + getPath());
       switch (method) {
         case POST:
           reqBuilder
