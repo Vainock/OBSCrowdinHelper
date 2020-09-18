@@ -28,16 +28,25 @@ public class CrowdinRequest implements Runnable {
 
   }
 
-  private static String getToken() {
-    return token;
-  }
-
   public static void setToken(String token) {
     CrowdinRequest.token = token;
   }
 
-  String getPath() {
-    return path;
+  public static synchronized List<CrowdinResponse> send(List<CrowdinRequest> requests,
+      boolean clear)
+      throws Exception {
+    if (executor == null || executor.isTerminated()) {
+      executor = Executors.newFixedThreadPool(20);
+    }
+    for (CrowdinRequest request : requests) {
+      request.setMultiple();
+      executor.execute(request);
+    }
+    executor.shutdown();
+    while (!executor.isTerminated()) {
+      Thread.sleep(100);
+    }
+    return CrowdinResponse.getResponses(clear);
   }
 
   public CrowdinRequest setPath(String path) {
@@ -48,10 +57,6 @@ public class CrowdinRequest implements Runnable {
   public CrowdinRequest setBody(JSONObject body) {
     this.body = body;
     return this;
-  }
-
-  CrowdinRequestMethod getRequestMethod() {
-    return method;
   }
 
   public CrowdinRequest setRequestMethod(CrowdinRequestMethod method) {
@@ -76,38 +81,12 @@ public class CrowdinRequest implements Runnable {
     return response;
   }
 
-  public static synchronized List<CrowdinResponse> send(List<CrowdinRequest> requests,
-      boolean clear)
-      throws Exception {
-    if (executor == null || executor.isTerminated()) {
-      executor = Executors.newFixedThreadPool(20);
-    }
-    for (CrowdinRequest request : requests) {
-      request.setMultiple();
-      executor.execute(request);
-    }
-    executor.shutdown();
-    while (!executor.isTerminated()) {
-      Thread.sleep(100);
-    }
-    return CrowdinResponse.getResponses(clear);
-  }
-
   @Override
   public void run() {
     try {
-      if (getToken() == null) {
-        throw new IllegalArgumentException("A token is required.");
-      }
-      if (getPath() == null) {
-        throw new IllegalArgumentException("A request path is required.");
-      }
-      if (getRequestMethod() == null) {
-        throw new IllegalArgumentException("A request method is required.");
-      }
       Request.Builder reqBuilder = new Request.Builder();
       reqBuilder.header("Authorization", "Bearer " + token);
-      reqBuilder.url("https://" + OBSCrowdinHelper.PROJECT_DOMAIN + "/api/v2/" + getPath());
+      reqBuilder.url("https://" + OBSCrowdinHelper.PROJECT_DOMAIN + "/api/v2/" + path);
       switch (method) {
         case POST:
           reqBuilder

@@ -1,6 +1,8 @@
 package de.vainock.obscrowdinhelper;
 
-import de.vainock.obscrowdinhelper.crowdin.*;
+import de.vainock.obscrowdinhelper.crowdin.CrowdinRequest;
+import de.vainock.obscrowdinhelper.crowdin.CrowdinRequestMethod;
+import de.vainock.obscrowdinhelper.crowdin.CrowdinResponse;
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -24,15 +26,14 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 public class OBSCrowdinHelper {
 
-  public static Scanner scanner = new Scanner(System.in);
   public static final String PROJECT_ID = "51028", PROJECT_DOMAIN = "crowdin.com";
+  public static Scanner scanner = new Scanner(System.in);
 
   public static void main(String[] args) {
     try {

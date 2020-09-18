@@ -14,6 +14,20 @@ public class CrowdinResponse {
 
   }
 
+  static void addResponse(CrowdinResponse response) {
+    responses.add(response);
+  }
+
+  public static List<CrowdinResponse> getResponses(boolean clear) {
+    if (clear) {
+      List<CrowdinResponse> res = new ArrayList<>(responses);
+      responses.clear();
+      return res;
+    } else {
+      return responses;
+    }
+  }
+
   public int getCode() {
     return code;
   }
@@ -30,19 +44,5 @@ public class CrowdinResponse {
   CrowdinResponse setBody(JSONObject body) {
     this.body = body;
     return this;
-  }
-
-  static void addResponse(CrowdinResponse response) {
-    responses.add(response);
-  }
-
-  public static List<CrowdinResponse> getResponses(boolean clear) {
-    if (clear) {
-      List<CrowdinResponse> res = new ArrayList<>(responses);
-      responses.clear();
-      return res;
-    } else {
-      return responses;
-    }
   }
 }
