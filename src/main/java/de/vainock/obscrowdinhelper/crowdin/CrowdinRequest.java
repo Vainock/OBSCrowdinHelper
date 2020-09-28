@@ -18,10 +18,10 @@ public class CrowdinRequest implements Runnable {
   private static final OkHttpClient client = new OkHttpClient();
   private static ExecutorService executor = null;
   private static String token;
-  private String path;
+  private String url;
   private JSONObject body;
   private CrowdinRequestMethod method;
-  private boolean isMultiple;
+  private boolean isMultiple, auth = true;
   private CrowdinResponse response;
 
   public CrowdinRequest() {
@@ -50,7 +50,18 @@ public class CrowdinRequest implements Runnable {
   }
 
   public CrowdinRequest setPath(String path) {
-    this.path = path;
+    url = "https://" + OBSCrowdinHelper.PROJECT_DOMAIN + "/api/v2/" + path;
+    return this;
+  }
+
+  public CrowdinRequest setUrl(String url) {
+    this.url = url;
+    auth = false;
+    return this;
+  }
+
+  public CrowdinRequest removeAuth() {
+    auth = false;
     return this;
   }
 
@@ -85,8 +96,10 @@ public class CrowdinRequest implements Runnable {
   public void run() {
     try {
       Request.Builder reqBuilder = new Request.Builder();
-      reqBuilder.header("Authorization", "Bearer " + token);
-      reqBuilder.url("https://" + OBSCrowdinHelper.PROJECT_DOMAIN + "/api/v2/" + path);
+      if (auth) {
+        reqBuilder.header("Authorization", "Bearer " + token);
+      }
+      reqBuilder.url(url);
       switch (method) {
         case POST:
           reqBuilder

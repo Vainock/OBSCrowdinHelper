@@ -28,7 +28,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 
 public class OBSCrowdinHelper {
 
@@ -141,16 +140,9 @@ public class OBSCrowdinHelper {
       }
       Map<String, JSONArray> topMembers = new HashMap<>();
       for (CrowdinResponse response : CrowdinRequest.send(requests, true)) {
-        BufferedInputStream input = new BufferedInputStream(
-            new URL(((JSONObject) response.getBody().get("data")).get("url").toString())
-                .openStream());
-        ByteArrayOutputStream result = new ByteArrayOutputStream();
-        byte[] buffer = new byte[1024];
-        int bytesRead;
-        while ((bytesRead = input.read(buffer)) != -1) {
-          result.write(buffer, 0, bytesRead);
-        }
-        JSONObject report = (JSONObject) new JSONParser().parse(result.toString());
+        JSONObject report = new CrowdinRequest()
+            .setUrl(((JSONObject) response.getBody().get("data")).get("url").toString())
+            .setRequestMethod(CrowdinRequestMethod.GET).removeAuth().send().getBody();
         topMembers.put(((JSONObject) report.get("language")).get("name").toString(),
             (JSONArray) report.get("data"));
       }
