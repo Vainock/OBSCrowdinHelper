@@ -22,3 +22,14 @@ Run the program with a simple double-click.
 1. Download or clone the repository.
 2. Execute `generateJar.bat`.
 3. Go to `/build/libs/`.
+
+### Alternate Usage
+
+This program can easily be used for other Crowdin projects, or even projects hosted on Crowdin Enterprise. Simply replace the two variables at the beginning of `OBSCrowdinHelper.java`, re-compile and run it.
+
+Where to get these values from?
+
+|                    | `PROJECT_ID` (_int_)                                            | `PROJECT_DOMAIN` (_string_)                   |
+| ------------------ | --------------------------------------------------------------- | --------------------------------------------- |
+| Crowdin            | Third line of every language XLIFF file                         | `crowdin.com`                                 |
+| Crowdin Enterprise | Present in the url if you're not in the editor, or method above | `[organization].crowdin.com` (present in url) |

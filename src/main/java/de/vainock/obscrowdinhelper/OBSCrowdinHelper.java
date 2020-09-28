@@ -31,7 +31,8 @@ import org.json.simple.JSONObject;
 
 public class OBSCrowdinHelper {
 
-  public static final String PROJECT_ID = "51028", PROJECT_DOMAIN = "crowdin.com";
+  public static final int PROJECT_ID = 51028;
+  public static final String PROJECT_DOMAIN = "crowdin.com";
   public static Scanner scanner = new Scanner(System.in);
 
   public static void main(String[] args) {
@@ -176,7 +177,7 @@ public class OBSCrowdinHelper {
       translatorsWriter.close();
 
       // build project
-      out(" - building OBS Studio project");
+      out(" - building project");
       JSONObject body = new JSONObject();
       body.put("skipUntranslatedStrings", true);
       body.put("exportApprovedOnly", false);
