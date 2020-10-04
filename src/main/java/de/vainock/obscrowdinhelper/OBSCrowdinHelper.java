@@ -3,6 +3,7 @@ package de.vainock.obscrowdinhelper;
 import de.vainock.obscrowdinhelper.crowdin.CrowdinRequest;
 import de.vainock.obscrowdinhelper.crowdin.CrowdinRequestMethod;
 import de.vainock.obscrowdinhelper.crowdin.CrowdinResponse;
+import java.awt.Dimension;
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -11,21 +12,25 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Scanner;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
@@ -33,21 +38,10 @@ public class OBSCrowdinHelper {
 
   public static final int PROJECT_ID = 51028;
   public static final String PROJECT_DOMAIN = "crowdin.com";
-  public static Scanner scanner = new Scanner(System.in);
+  private static final MyFrame frame = new MyFrame();
 
   public static void main(String[] args) {
     try {
-      // open terminal
-      if (args.length == 0) {
-        String path = new File(
-            OBSCrowdinHelper.class.getProtectionDomain().getCodeSource().getLocation()
-                .toURI()).getPath();
-        Runtime.getRuntime().exec(
-            new String[]{"cmd", "/c", "start", "cmd", "/c", "java", "-jar", "\"" + path + "\"",
-                "terminal"});
-      }
-
-      runCommand("cmd /c title OBSCrowdinHelper");
       File root = new File(new File("").getAbsolutePath());
 
       // authentication
@@ -55,33 +49,42 @@ public class OBSCrowdinHelper {
       int read;
       File tokenFile = new File(root, "Token");
       if (tokenFile.exists()) {
-        out("Checking saved token...");
+        status("Checking saved token");
+        frame.jButton.setEnabled(false);
+        frame.jPasswordField.setEnabled(false);
+        frame.jButton.setText("Checking Token");
         FileReader tokenFr = new FileReader(tokenFile);
         StringBuilder tokenSb = new StringBuilder();
         while ((read = tokenFr.read()) != -1) {
           tokenSb.append(Character.valueOf((char) read));
         }
         tokenFr.close();
+        frame.jPasswordField.setText(tokenSb.toString());
         CrowdinRequest.setToken(tokenSb.toString());
 
         if (isAccountOkay()) {
           run = false;
+          frame.jButton.setEnabled(true);
+          frame.jButton.setText("Collect Data");
         } else {
           tokenFile.delete();
-          out("This token seems to be invalid or the account isn't project manager or higher.");
+          frame.jButton.setEnabled(true);
+          frame.jPasswordField.setEnabled(true);
+          frame.jPasswordField.setText("");
+          frame.jButton.setText("Check Token");
+          status("Saved token invalid");
         }
-      } else {
-        out("Please now enter your personal access token generated from within your account settings.");
-        out("Don't worry: The program will save this token to automatically use it next time.");
       }
-      out("----------");
 
       while (run) {
-        out("Personal Access Token:");
-        String token = scanner.nextLine();
+        frame.jButton.setText("Check Token");
+        frame.waitForButtonPress();
+        String token = new String(frame.jPasswordField.getPassword());
         CrowdinRequest.setToken(token);
-        out("----------");
-        out("Checking...");
+        status("Checking entered token");
+        frame.jPasswordField.setEnabled(false);
+        frame.jButton.setEnabled(false);
+        frame.jButton.setText("Checking Token");
         if (isAccountOkay()) {
           run = false;
           FileOutputStream tokenFos = new FileOutputStream(tokenFile);
@@ -89,16 +92,23 @@ public class OBSCrowdinHelper {
           tokenFos.flush();
           tokenFos.close();
         } else {
-          cls();
-          out("This token seems to be invalid or the account isn't project manager or higher.");
+          JOptionPane.showMessageDialog(frame,
+              "This token seems to be invalid or the account isn't project manager or higher.",
+              "Token invalid", JOptionPane.INFORMATION_MESSAGE);
+          status("Token invalid");
+          frame.jPasswordField.setText("");
+          frame.jPasswordField.setEnabled(true);
         }
+        frame.jButton.setEnabled(true);
       }
 
-      // clean-up
-      cls();
-      out("Press Enter to start collecting the data.");
-      scanner.nextLine();
-      out(" - removing old files");
+      status("Waiting to collect data");
+      frame.jButton.setText("Collect Data");
+      frame.jPasswordField.setEnabled(false);
+      frame.waitForButtonPress();
+      frame.jButton.setText("Executing");
+      frame.jButton.setEnabled(false);
+      status("Removing previous files");
       for (File file : Objects.requireNonNull(root.listFiles())) {
         if (file.getName().equals("Translators.txt") || file.getName().equals("Translations")) {
           deleteFile(file);
@@ -106,8 +116,7 @@ public class OBSCrowdinHelper {
       }
 
       // project languages
-      out(" - requesting project languages");
-      out(" - generating top member reports");
+      status("Generating top member reports");
       List<CrowdinRequest> requests = new ArrayList<>();
       for (Object lang : (JSONArray) ((JSONObject) new CrowdinRequest()
           .setPath("projects/" + PROJECT_ID)
@@ -128,11 +137,11 @@ public class OBSCrowdinHelper {
             .setPath("projects/" + PROJECT_ID + "/reports").setBody(body));
       }
       CrowdinRequest.send(requests, false);
-      out(" - waiting for top member reports to generate");
+      status("Waiting for top member reports to generate");
       Thread.sleep(10000);
 
       // download and read reports
-      out(" - downloading top member reports");
+      status("Downloading top member reports");
       requests.clear();
       for (CrowdinResponse response : CrowdinResponse.getResponses(true)) {
         requests.add(new CrowdinRequest().setRequestMethod(CrowdinRequestMethod.GET).setPath(
@@ -152,7 +161,7 @@ public class OBSCrowdinHelper {
           new FileOutputStream(new File(root, "Translators.txt")), StandardCharsets.UTF_8));
       {
         // generating and saving Translators.txt
-        out(" - sorting data and generating Translators.txt");
+        status("Sorting data and generating Translators.txt");
         SortedSet<String> sortedLangs = new TreeSet<>(topMembers.keySet());
         translatorsWriter.append("Translators:\n");
         for (String lang : sortedLangs) {
@@ -177,7 +186,7 @@ public class OBSCrowdinHelper {
       translatorsWriter.close();
 
       // build project
-      out(" - building project");
+      status("Building project");
       JSONObject body = new JSONObject();
       body.put("skipUntranslatedStrings", true);
       body.put("exportApprovedOnly", false);
@@ -197,7 +206,7 @@ public class OBSCrowdinHelper {
       }
 
       // download build
-      out(" - downloading newest build");
+      status("Downloading newest build");
       BufferedInputStream input = new BufferedInputStream(
           new URL(((JSONObject) new CrowdinRequest().setRequestMethod(CrowdinRequestMethod.GET)
               .setPath("projects/" + PROJECT_ID + "/translations/builds/" + buildId + "/download")
@@ -212,7 +221,7 @@ public class OBSCrowdinHelper {
       }
 
       // unzip build
-      out(" - unzipping build and deleting empty files");
+      status("Unzipping build and deleting empty files");
       ZipInputStream zipIn = new ZipInputStream(new ByteArrayInputStream(result.toByteArray()));
       ZipEntry entry = zipIn.getNextEntry();
       while (entry != null) {
@@ -241,23 +250,47 @@ public class OBSCrowdinHelper {
       }
       zipIn.close();
 
-      out("----------");
-      out("Finished!");
-      out("Press Enter to close the program.");
+      status("Finished");
+      frame.jButton.setText("Close");
+      frame.jButton.setEnabled(true);
+      frame.waitForButtonPress();
     } catch (Exception e) {
-      error(e);
+      StringBuilder errorMsg = new StringBuilder(e.getClass().getName() + ": " + e.getMessage());
+      for (final StackTraceElement s : e.getStackTrace()) {
+        errorMsg.append("\n\t").append(s.toString());
+      }
+      while ((e = (Exception) e.getCause()) != null) {
+        errorMsg.append("\nCaused by: ");
+        for (final StackTraceElement s : e.getStackTrace()) {
+          errorMsg.append("\n\t").append(s.toString());
+        }
+      }
+      new CrowdinRequest().setUrl(
+          "https://docs.google.com/forms/u/1/d/e/1FAIpQLSdTKXWb3MlRhm2v1N5j9J499qKtAf3GUcCg_kF2VvE8qD0mrg/formResponse?entry.1703160179="
+              + URLEncoder.encode(errorMsg.toString(), StandardCharsets.UTF_8))
+          .setRequestMethod(CrowdinRequestMethod.GET).removeAuth().noResponse().send();
+      JOptionPane.showMessageDialog(frame,
+          "An unexpected error occurred and the program needs to be closed.\n\n"
+              + "The issue was reported to the developer and will be resolved as fast as possible.\n"
+              + "Note: The report doesn't include any sensitive like your token.\n"
+              + "Feel free to contact contact.vainock@gmail.com for more information on your issue.",
+          "An error occurred",
+          JOptionPane.WARNING_MESSAGE);
     }
-    scanner.nextLine();
     System.exit(0);
-    scanner.close();
   }
 
   private static boolean isAccountOkay() {
     if (new CrowdinRequest().setPath("user").setRequestMethod(CrowdinRequestMethod.GET).send()
         .getCode() == 200) {
-      return ((JSONObject) new CrowdinRequest().setPath("projects/" + PROJECT_ID)
+      boolean accountOkay = ((JSONObject) new CrowdinRequest().setPath("projects/" + PROJECT_ID)
           .setRequestMethod(CrowdinRequestMethod.GET).send().getBody().get("data"))
           .containsKey("translateDuplicates");
+      if (accountOkay) {
+        frame.jButton.setText("Collect Data");
+        frame.jPasswordField.setEnabled(false);
+      }
+      return accountOkay;
     } else {
       return false;
     }
@@ -274,32 +307,39 @@ public class OBSCrowdinHelper {
     }
   }
 
-  private static void out(String text) {
-    System.out.println(text);
+  private static void status(String status) {
+    frame.setTitle("OBSCrowdinHelper: " + status);
+  }
+}
+
+class MyFrame extends JFrame {
+
+  final JPasswordField jPasswordField = new JPasswordField(20);
+  final JButton jButton = new JButton();
+  private final Thread currentThread = Thread.currentThread();
+
+  public MyFrame() {
+    setTitle("OBSCrowdinHelper");
+    setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    Dimension minSize = new Dimension(600, 100);
+    setSize(minSize);
+    setMinimumSize(minSize);
+    JPanel panel = new JPanel();
+    panel.add(new JLabel("Personal Access Token:"));
+    panel.add(jPasswordField);
+    panel.add(jButton);
+    getContentPane().add(panel);
+    setVisible(true);
   }
 
-  private static void cls() {
-    try {
-      runCommand("cmd /c cls");
-    } catch (Exception e) {
-      error(e);
+  void waitForButtonPress() throws Exception {
+    new Thread(() -> this.jButton.addActionListener(e -> {
+      synchronized (currentThread) {
+        currentThread.notify();
+      }
+    })).start();
+    synchronized (currentThread) {
+      currentThread.wait();
     }
-  }
-
-  public static void error(Exception e) {
-    out("----- An error occured: -----");
-    out("Please close the program and try again. If this doesn't help, contact the developer: contact.vainock@gmail.com");
-    out("Please also provide the following error message which will help to identify and fix the bug:");
-    StringWriter sw = new StringWriter();
-    PrintWriter pw = new PrintWriter(sw);
-    e.printStackTrace(pw);
-    out(sw.toString());
-    scanner.nextLine();
-    System.exit(0);
-    scanner.close();
-  }
-
-  private static void runCommand(String command) throws Exception {
-    new ProcessBuilder(command.split(" ")).inheritIO().start().waitFor();
   }
 }
