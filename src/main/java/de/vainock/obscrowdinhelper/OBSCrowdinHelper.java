@@ -120,7 +120,7 @@ public class OBSCrowdinHelper {
       List<CrowdinRequest> requests = new ArrayList<>();
       for (Object lang : (JSONArray) ((JSONObject) new CrowdinRequest()
           .setPath("projects/" + PROJECT_ID)
-          .setRequestMethod(CrowdinRequestMethod.GET).send().getBody().get("data"))
+          .setRequestMethod(CrowdinRequestMethod.GET).send().body.get("data"))
           .get("targetLanguageIds")) {
 
         // generate reports
@@ -145,14 +145,14 @@ public class OBSCrowdinHelper {
       requests.clear();
       for (CrowdinResponse response : CrowdinResponse.getResponses(true)) {
         requests.add(new CrowdinRequest().setRequestMethod(CrowdinRequestMethod.GET).setPath(
-            "projects/" + PROJECT_ID + "/reports/" + ((JSONObject) response.getBody().get("data"))
+            "projects/" + PROJECT_ID + "/reports/" + ((JSONObject) response.body.get("data"))
                 .get("identifier") + "/download"));
       }
       Map<String, JSONArray> topMembers = new HashMap<>();
       for (CrowdinResponse response : CrowdinRequest.send(requests, true)) {
         JSONObject report = new CrowdinRequest()
-            .setUrl(((JSONObject) response.getBody().get("data")).get("url").toString())
-            .setRequestMethod(CrowdinRequestMethod.GET).removeAuth().send().getBody();
+            .setUrl(((JSONObject) response.body.get("data")).get("url").toString())
+            .setRequestMethod(CrowdinRequestMethod.GET).removeAuth().send().body;
         topMembers.put(((JSONObject) report.get("language")).get("name").toString(),
             (JSONArray) report.get("data"));
       }
@@ -192,13 +192,13 @@ public class OBSCrowdinHelper {
       body.put("exportApprovedOnly", false);
       long buildId = (long) ((JSONObject) new CrowdinRequest()
           .setPath("projects/" + PROJECT_ID + "/translations/builds")
-          .setRequestMethod(CrowdinRequestMethod.POST).setBody(body).send().getBody()
+          .setRequestMethod(CrowdinRequestMethod.POST).setBody(body).send().body
           .get("data")).get("id");
       while (true) {
         JSONObject bodyData = (JSONObject) new CrowdinRequest().setPath(
             "projects/" + PROJECT_ID + "/translations/builds/" + buildId)
             .setRequestMethod(CrowdinRequestMethod.GET).send()
-            .getBody().get("data");
+            .body.get("data");
         if (bodyData.get("status").equals("finished")) {
           break;
         }
@@ -211,7 +211,7 @@ public class OBSCrowdinHelper {
           new URL(((JSONObject) new CrowdinRequest().setRequestMethod(CrowdinRequestMethod.GET)
               .setPath("projects/" + PROJECT_ID + "/translations/builds/" + buildId + "/download")
               .send()
-              .getBody().get("data")).get("url").toString())
+              .body.get("data")).get("url").toString())
               .openStream());
       ByteArrayOutputStream result = new ByteArrayOutputStream();
       byte[] buffer = new byte[1024];
@@ -282,9 +282,9 @@ public class OBSCrowdinHelper {
 
   private static boolean isAccountOkay() {
     if (new CrowdinRequest().setPath("user").setRequestMethod(CrowdinRequestMethod.GET).send()
-        .getCode() == 200) {
+        .code == 200) {
       boolean accountOkay = ((JSONObject) new CrowdinRequest().setPath("projects/" + PROJECT_ID)
-          .setRequestMethod(CrowdinRequestMethod.GET).send().getBody().get("data"))
+          .setRequestMethod(CrowdinRequestMethod.GET).send().body.get("data"))
           .containsKey("translateDuplicates");
       if (accountOkay) {
         frame.jButton.setText("Collect Data");

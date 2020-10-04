@@ -80,10 +80,6 @@ public class CrowdinRequest implements Runnable {
     return this;
   }
 
-  private boolean isMultiple() {
-    return isMultiple;
-  }
-
   private void setMultiple() {
     this.isMultiple = true;
   }
@@ -119,7 +115,7 @@ public class CrowdinRequest implements Runnable {
         CrowdinResponse crowdinResponse = new CrowdinResponse().setCode(requestRes.code()).setBody(
             (JSONObject) new JSONParser()
                 .parse(Objects.requireNonNull(requestRes.body()).string()));
-        if (isMultiple()) {
+        if (isMultiple) {
           CrowdinResponse.addResponse(crowdinResponse);
         } else {
           setResponse(crowdinResponse);

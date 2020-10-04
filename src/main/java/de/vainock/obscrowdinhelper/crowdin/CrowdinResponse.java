@@ -7,10 +7,10 @@ import org.json.simple.JSONObject;
 public class CrowdinResponse {
 
   private static final List<CrowdinResponse> responses = new ArrayList<>();
-  private int code;
-  private JSONObject body;
+  public int code;
+  public JSONObject body;
 
-  public CrowdinResponse() {
+  CrowdinResponse() {
 
   }
 
@@ -28,17 +28,9 @@ public class CrowdinResponse {
     }
   }
 
-  public int getCode() {
-    return code;
-  }
-
   CrowdinResponse setCode(int code) {
     this.code = code;
     return this;
-  }
-
-  public JSONObject getBody() {
-    return body;
   }
 
   CrowdinResponse setBody(JSONObject body) {
