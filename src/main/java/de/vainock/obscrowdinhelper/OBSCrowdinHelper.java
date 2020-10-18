@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -148,42 +147,43 @@ public class OBSCrowdinHelper {
             "projects/" + PROJECT_ID + "/reports/" + ((JSONObject) response.body.get("data"))
                 .get("identifier") + "/download"));
       }
-      Map<String, JSONArray> topMembers = new HashMap<>();
+      Map<String, List<String>> topMembers = new HashMap<>();
       for (CrowdinResponse response : CrowdinRequest.send(requests, true)) {
         JSONObject report = new CrowdinRequest()
             .setUrl(((JSONObject) response.body.get("data")).get("url").toString())
             .setRequestMethod(CrowdinRequestMethod.GET).removeAuth().send().body;
-        topMembers.put(((JSONObject) report.get("language")).get("name").toString(),
-            (JSONArray) report.get("data"));
-      }
-
-      Writer translatorsWriter = new BufferedWriter(new OutputStreamWriter(
-          new FileOutputStream(new File(root, "Translators.txt")), StandardCharsets.UTF_8));
-      {
-        // generating and saving Translators.txt
-        status("Sorting data and generating Translators.txt");
-        SortedSet<String> sortedLangs = new TreeSet<>(topMembers.keySet());
-        translatorsWriter.append("Translators:\n");
-        for (String lang : sortedLangs) {
-          JSONArray members = topMembers.get(lang);
-          if (members == null) {
+        List<String> users = new ArrayList<>();
+        JSONArray members = (JSONArray) report.get("data");
+        if (members == null) {
+          continue;
+        }
+        for (Object member : members) {
+          String username =
+              ((JSONObject) ((JSONObject) member).get("user")).get("fullName").toString();
+          if (username.equals("REMOVED_USER")) {
             continue;
           }
-          translatorsWriter.append(' ').append(lang).append(":\n");
-          for (Object member : members) {
-            String username =
-                ((JSONObject) ((JSONObject) member).get("user")).get("fullName").toString();
-            if (username.equals("REMOVED_USER")) {
-              continue;
-            }
-            translatorsWriter.append("  - ");
-            translatorsWriter.append(username);
-            translatorsWriter.append('\n');
-          }
+          users.add(username);
+        }
+        if (users.size() != 0) {
+          topMembers.put(((JSONObject) report.get("language")).get("name").toString(), users);
         }
       }
-      translatorsWriter.flush();
-      translatorsWriter.close();
+
+      // generating and saving Translators.txt
+      {
+        Writer translatorsWriter = new BufferedWriter(new OutputStreamWriter(
+            new FileOutputStream(new File(root, "Translators.txt")), StandardCharsets.UTF_8));
+        translatorsWriter.append("Translators:\n");
+        for (String lang : new TreeSet<>(topMembers.keySet())) {
+          translatorsWriter.append(' ').append(lang).append(":\n");
+          for (String username : topMembers.get(lang)) {
+            translatorsWriter.append("  - ").append(username).append('\n');
+          }
+        }
+        translatorsWriter.flush();
+        translatorsWriter.close();
+      }
 
       // build project
       status("Building project");
