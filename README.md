@@ -26,7 +26,7 @@ This program can easily be used for other Crowdin projects, or even projects hos
 
 Where to get these values from?
 
-|                    | `PROJECT_ID` (_int_)                                            | `PROJECT_DOMAIN` (_string_)                   |
-| ------------------ | --------------------------------------------------------------- | --------------------------------------------- |
-| Crowdin            | Third line of every language XLIFF file                         | `crowdin.com`                                 |
-| Crowdin Enterprise | Present in the url if you're not in the editor, or method above | `[organization].crowdin.com` (present in url) |
+|                    | `PROJECT_ID` (_int_)    | `PROJECT_DOMAIN` (_string_)                   |
+| ------------------ | ----------------------- | --------------------------------------------- |
+| Crowdin            | Main project page       | `crowdin.com`                                 |
+| Crowdin Enterprise | Project "About" section | `[organization].crowdin.com` (present in url) |
