@@ -12,7 +12,7 @@ OBSCrowdinHelper is an easy-to-use Java tool to obtain the newest translations a
 ### Requirements
 
 - [Crowdin API v2 Personal Access Token](https://crowdin.com/settings#api-key) from a project manager or the owner
-- Java SE 10 or higher
+- Java SE 8 or higher
 
 ### Build Instructions
 

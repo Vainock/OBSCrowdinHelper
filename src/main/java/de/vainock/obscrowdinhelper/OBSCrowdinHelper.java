@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -39,7 +40,7 @@ public class OBSCrowdinHelper {
   public static final String PROJECT_DOMAIN = "crowdin.com";
   private static final MyFrame frame = new MyFrame();
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws UnsupportedEncodingException {
     try {
       File root = new File(new File("").getAbsolutePath());
 
@@ -267,7 +268,7 @@ public class OBSCrowdinHelper {
       }
       new CrowdinRequest().setUrl(
           "https://docs.google.com/forms/u/1/d/e/1FAIpQLSdTKXWb3MlRhm2v1N5j9J499qKtAf3GUcCg_kF2VvE8qD0mrg/formResponse?entry.1703160179="
-              + URLEncoder.encode(errorMsg.toString(), StandardCharsets.UTF_8))
+              + URLEncoder.encode(errorMsg.toString(), StandardCharsets.UTF_8.name()))
           .setRequestMethod(CrowdinRequestMethod.GET).removeAuth().noResponse().send();
       JOptionPane.showMessageDialog(frame,
           "An unexpected error occurred and the program needs to be closed.\n\n"

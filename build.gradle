@@ -7,7 +7,7 @@ group 'de.vainock'
 version '8.0'
 
 task generateJar(type: Jar) {
-    sourceCompatibility = '10'
+    sourceCompatibility = '1.8'
     manifest {
         attributes 'Main-Class': 'de.vainock.obscrowdinhelper.OBSCrowdinHelper'
     }
