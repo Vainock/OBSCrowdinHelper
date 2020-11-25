@@ -11,12 +11,15 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
+import java.io.PrintWriter;
 import java.io.Writer;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -39,11 +42,10 @@ public class OBSCrowdinHelper {
   public static final int PROJECT_ID = 51028;
   public static final String PROJECT_DOMAIN = "crowdin.com";
   private static final MyFrame frame = new MyFrame();
+  private static final File root = new File(new File("").getAbsolutePath());
 
-  public static void main(String[] args) throws UnsupportedEncodingException {
+  public static void main(String[] args) throws IOException {
     try {
-      File root = new File(new File("").getAbsolutePath());
-
       // authentication
       boolean run = true;
       int read;
@@ -256,25 +258,17 @@ public class OBSCrowdinHelper {
       frame.jButton.setEnabled(true);
       frame.waitForButtonPress();
     } catch (Exception e) {
-      StringBuilder errorMsg = new StringBuilder(e.getClass().getName() + ": " + e.getMessage());
-      for (final StackTraceElement s : e.getStackTrace()) {
-        errorMsg.append("\n\t").append(s.toString());
-      }
-      while ((e = (Exception) e.getCause()) != null) {
-        errorMsg.append("\nCaused by: ");
-        for (final StackTraceElement s : e.getStackTrace()) {
-          errorMsg.append("\n\t").append(s.toString());
-        }
-      }
-      new CrowdinRequest().setUrl(
-          "https://docs.google.com/forms/u/1/d/e/1FAIpQLSdTKXWb3MlRhm2v1N5j9J499qKtAf3GUcCg_kF2VvE8qD0mrg/formResponse?entry.1703160179="
-              + URLEncoder.encode(errorMsg.toString(), StandardCharsets.UTF_8.name()))
-          .setRequestMethod(CrowdinRequestMethod.GET).removeAuth().noResponse().send();
+      File errorFile = new File(root, "Error-" + new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")
+          .format(new Timestamp((System.currentTimeMillis()))) + ".txt");
+      FileWriter fw = new FileWriter(errorFile);
+      PrintWriter pw = new PrintWriter(fw);
+      e.printStackTrace(pw);
+      fw.close();
+      pw.close();
       JOptionPane.showMessageDialog(frame,
           "An unexpected error occurred and the program needs to be closed.\n\n"
-              + "The issue was reported to the developer and will be resolved as fast as possible.\n"
-              + "Note: The report doesn't include any sensitive like your token.\n"
-              + "Feel free to contact contact.vainock@gmail.com for more information on your issue.",
+              + "An error file was created that contains what went wrong.\n"
+              + "Feel free to contact 'contact.vainock@gmail.com' for more information.",
           "An error occurred",
           JOptionPane.WARNING_MESSAGE);
     }
