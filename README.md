@@ -2,6 +2,8 @@
 
 OBSCrowdinHelper is an easy-to-use Java tool to obtain the newest translations and translators from the [OBS Studio Crowdin project](https://crowdin.com/project/obs-studio).
 
+![screenshot of the simple GUI](https://raw.githubusercontent.com/Vainock/OBSCrowdinHelper/main/GUI.png "The simple GUI of the program.")
+
 ### Features
 
 - Automatically build the project.
