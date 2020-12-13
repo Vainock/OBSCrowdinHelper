@@ -1,1 +1,1 @@
-gradlew.bat generateJar
+.\gradlew.bat generateJar
