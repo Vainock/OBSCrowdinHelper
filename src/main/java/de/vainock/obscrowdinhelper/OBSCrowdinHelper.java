@@ -266,8 +266,7 @@ public class OBSCrowdinHelper {
       pw.close();
       JOptionPane.showMessageDialog(frame,
           "An unexpected error occurred and the program needs to be closed.\n\n"
-              + "An error file was created that contains what went wrong.\n"
-              + "Feel free to contact 'contact.vainock@gmail.com' for more information.",
+              + "The error file '"+errorFile.getName()+"' was created.\n",
           "An error occurred",
           JOptionPane.WARNING_MESSAGE);
     }
