@@ -49,7 +49,7 @@ public class OBSCrowdinHelper {
       // authentication
       boolean run = true;
       int read;
-      File tokenFile = new File(root, "Token");
+      File tokenFile = new File(root, "Token.txt");
       if (tokenFile.exists()) {
         status("Checking saved token");
         frame.jButton.setEnabled(false);

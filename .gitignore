@@ -3,5 +3,4 @@
 build/
 
 Translations/
-Token
-Translators.txt
+*.txt
