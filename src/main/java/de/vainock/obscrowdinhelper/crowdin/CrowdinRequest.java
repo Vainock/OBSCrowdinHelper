@@ -21,7 +21,7 @@ public class CrowdinRequest implements Runnable {
   private String url;
   private JSONObject body;
   private CrowdinRequestMethod method;
-  private boolean isMultiple, auth = true, noResponse = false;
+  private boolean isMultiple, auth = true;
   private CrowdinResponse response;
 
   public CrowdinRequest() {
@@ -62,11 +62,6 @@ public class CrowdinRequest implements Runnable {
 
   public CrowdinRequest removeAuth() {
     auth = false;
-    return this;
-  }
-
-  public CrowdinRequest noResponse() {
-    noResponse = true;
     return this;
   }
 
@@ -111,15 +106,13 @@ public class CrowdinRequest implements Runnable {
           break;
       }
       Response requestRes = client.newCall(reqBuilder.build()).execute();
-      if (!noResponse) {
-        CrowdinResponse crowdinResponse = new CrowdinResponse().setCode(requestRes.code()).setBody(
-            (JSONObject) new JSONParser()
-                .parse(Objects.requireNonNull(requestRes.body()).string()));
-        if (isMultiple) {
-          CrowdinResponse.addResponse(crowdinResponse);
-        } else {
-          setResponse(crowdinResponse);
-        }
+      CrowdinResponse crowdinResponse = new CrowdinResponse().setCode(requestRes.code()).setBody(
+          (JSONObject) new JSONParser()
+              .parse(Objects.requireNonNull(requestRes.body()).string()));
+      if (isMultiple) {
+        CrowdinResponse.addResponse(crowdinResponse);
+      } else {
+        setResponse(crowdinResponse);
       }
     } catch (Exception e) {
       e.printStackTrace();
