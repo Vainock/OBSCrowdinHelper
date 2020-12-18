@@ -192,7 +192,6 @@ public class OBSCrowdinHelper {
       status("Building project");
       JSONObject body = new JSONObject();
       body.put("skipUntranslatedStrings", true);
-      body.put("exportApprovedOnly", false);
       long buildId = (long) ((JSONObject) new CrowdinRequest()
           .setPath("projects/" + PROJECT_ID + "/translations/builds")
           .setRequestMethod(CrowdinRequestMethod.POST).setBody(body).send().body
