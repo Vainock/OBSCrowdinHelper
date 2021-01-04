@@ -19,5 +19,5 @@ OBSCrowdinHelper is an easy-to-use Java tool to obtain the newest translations a
 ### Build Instructions
 
 1. Download the repository.
-2. Execute `generateJar.bat` if possible, otherwise run command `./gradlew generateJar`.
+2. Run `./gradlew generateJar` or `gradlew.bat generateJar` on Windows.
 3. Go to `/build/libs/`.
