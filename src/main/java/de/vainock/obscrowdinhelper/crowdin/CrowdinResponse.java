@@ -2,6 +2,7 @@ package de.vainock.obscrowdinhelper.crowdin;
 
 import java.util.ArrayList;
 import java.util.List;
+import okhttp3.ResponseBody;
 import org.json.simple.JSONObject;
 
 public class CrowdinResponse {
@@ -9,6 +10,7 @@ public class CrowdinResponse {
   private static final List<CrowdinResponse> responses = new ArrayList<>();
   public int code;
   public JSONObject body;
+  public ResponseBody rawBody;
 
   CrowdinResponse() {
 
@@ -35,6 +37,11 @@ public class CrowdinResponse {
 
   CrowdinResponse setBody(JSONObject body) {
     this.body = body;
+    return this;
+  }
+
+  CrowdinResponse setRawBody(ResponseBody rawBody) {
+    this.rawBody = rawBody;
     return this;
   }
 }

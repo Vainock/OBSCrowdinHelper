@@ -1,10 +1,10 @@
 package de.vainock.obscrowdinhelper.crowdin;
 
-import de.vainock.obscrowdinhelper.OBSCrowdinHelper;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -15,13 +15,15 @@ import org.json.simple.parser.JSONParser;
 
 public class CrowdinRequest implements Runnable {
 
+  private static final int PROJECT_ID = 51028;
+  private static final String PROJECT_DOMAIN = "crowdin.com";
   private static final OkHttpClient client = new OkHttpClient();
   private static ExecutorService executor = null;
   private static String token;
+  private boolean isMultiple = false, auth = true;
   private String url;
   private JSONObject body;
   private CrowdinRequestMethod method;
-  private boolean isMultiple, auth = true;
   private CrowdinResponse response;
 
   public CrowdinRequest() {
@@ -43,24 +45,23 @@ public class CrowdinRequest implements Runnable {
       executor.execute(request);
     }
     executor.shutdown();
-    while (!executor.isTerminated()) {
-      Thread.sleep(100);
-    }
+    executor.awaitTermination(9, TimeUnit.DAYS);
     return CrowdinResponse.getResponses(clear);
   }
 
   public CrowdinRequest setPath(String path) {
-    url = "https://" + OBSCrowdinHelper.PROJECT_DOMAIN + "/api/v2/" + path;
+    if (path.startsWith("/")) {
+      url = "https://" + PROJECT_DOMAIN + "/api/v2" + path;
+    } else if (path.isEmpty()) {
+      url = "https://" + PROJECT_DOMAIN + "/api/v2/projects/" + PROJECT_ID;
+    } else {
+      url = "https://" + PROJECT_DOMAIN + "/api/v2/projects/" + PROJECT_ID + '/' + path;
+    }
     return this;
   }
 
   public CrowdinRequest setUrl(String url) {
     this.url = url;
-    auth = false;
-    return this;
-  }
-
-  public CrowdinRequest removeAuth() {
     auth = false;
     return this;
   }

@@ -3,7 +3,6 @@ package de.vainock.obscrowdinhelper;
 import de.vainock.obscrowdinhelper.crowdin.CrowdinRequest;
 import de.vainock.obscrowdinhelper.crowdin.CrowdinRequestMethod;
 import de.vainock.obscrowdinhelper.crowdin.CrowdinResponse;
-import java.awt.Dimension;
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -12,7 +11,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
@@ -28,23 +26,16 @@ import java.util.Objects;
 import java.util.TreeSet;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPasswordField;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 public class OBSCrowdinHelper {
 
-  public static final int PROJECT_ID = 51028;
-  public static final String PROJECT_DOMAIN = "crowdin.com";
   private static final MyFrame frame = new MyFrame();
   private static final File root = new File(new File("").getAbsolutePath());
 
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) {
     try {
       // authentication
       boolean run = true;
@@ -121,7 +112,7 @@ public class OBSCrowdinHelper {
       status("Generating top member reports");
       List<CrowdinRequest> requests = new ArrayList<>();
       for (Object lang : (JSONArray) ((JSONObject) new CrowdinRequest()
-          .setPath("projects/" + PROJECT_ID)
+          .setPath("")
           .setRequestMethod(CrowdinRequestMethod.GET).send().body.get("data"))
           .get("targetLanguageIds")) {
 
@@ -136,7 +127,7 @@ public class OBSCrowdinHelper {
         schema.put("dateTo", "2030-01-01T00:00:00+00:00");
         body.put("schema", schema);
         requests.add(new CrowdinRequest().setRequestMethod(CrowdinRequestMethod.POST)
-            .setPath("projects/" + PROJECT_ID + "/reports").setBody(body));
+            .setPath("reports").setBody(body));
       }
       CrowdinRequest.send(requests, false);
       status("Waiting for top member reports to generate");
@@ -147,14 +138,14 @@ public class OBSCrowdinHelper {
       requests.clear();
       for (CrowdinResponse response : CrowdinResponse.getResponses(true)) {
         requests.add(new CrowdinRequest().setRequestMethod(CrowdinRequestMethod.GET).setPath(
-            "projects/" + PROJECT_ID + "/reports/" + ((JSONObject) response.body.get("data"))
+            "reports/" + ((JSONObject) response.body.get("data"))
                 .get("identifier") + "/download"));
       }
       Map<String, List<String>> topMembers = new HashMap<>();
       for (CrowdinResponse response : CrowdinRequest.send(requests, true)) {
         JSONObject report = new CrowdinRequest()
             .setUrl(((JSONObject) response.body.get("data")).get("url").toString())
-            .setRequestMethod(CrowdinRequestMethod.GET).removeAuth().send().body;
+            .setRequestMethod(CrowdinRequestMethod.GET).send().body;
         List<String> users = new ArrayList<>();
         JSONArray members = (JSONArray) report.get("data");
         if (members == null) {
@@ -173,7 +164,7 @@ public class OBSCrowdinHelper {
         }
       }
 
-      // generating and saving Translators.txt
+      // generate and save Translators.txt
       {
         Writer translatorsWriter = new BufferedWriter(new OutputStreamWriter(
             new FileOutputStream(new File(root, "Translators.txt")), StandardCharsets.UTF_8));
@@ -193,37 +184,36 @@ public class OBSCrowdinHelper {
       JSONObject body = new JSONObject();
       body.put("skipUntranslatedStrings", true);
       long buildId = (long) ((JSONObject) new CrowdinRequest()
-          .setPath("projects/" + PROJECT_ID + "/translations/builds")
+          .setPath("translations/builds")
           .setRequestMethod(CrowdinRequestMethod.POST).setBody(body).send().body
           .get("data")).get("id");
       while (true) {
         JSONObject bodyData = (JSONObject) new CrowdinRequest().setPath(
-            "projects/" + PROJECT_ID + "/translations/builds/" + buildId)
+            "translations/builds/" + buildId)
             .setRequestMethod(CrowdinRequestMethod.GET).send()
             .body.get("data");
         if (bodyData.get("status").equals("finished")) {
           break;
         }
-        Thread.sleep(3000);
+        Thread.sleep(1000);
       }
 
       // download build
-      status("Downloading newest build");
+      status("Downloading newest build (may take minutes)");
       BufferedInputStream input = new BufferedInputStream(
           new URL(((JSONObject) new CrowdinRequest().setRequestMethod(CrowdinRequestMethod.GET)
-              .setPath("projects/" + PROJECT_ID + "/translations/builds/" + buildId + "/download")
+              .setPath("translations/builds/" + buildId + "/download")
               .send()
               .body.get("data")).get("url").toString())
               .openStream());
       ByteArrayOutputStream result = new ByteArrayOutputStream();
-      byte[] buffer = new byte[1024];
-      int bytesRead;
-      while ((bytesRead = input.read(buffer)) != -1) {
-        result.write(buffer, 0, bytesRead);
+      byte[] readBuffer = new byte[1024];
+      while ((read = input.read(readBuffer)) != -1) {
+        result.write(readBuffer, 0, read);
       }
 
-      // unzip build
-      status("Unzipping build and deleting empty files");
+      // unpack build and only save non-empty files
+      status("Saving non-empty files");
       ZipInputStream zipIn = new ZipInputStream(new ByteArrayInputStream(result.toByteArray()));
       ZipEntry entry = zipIn.getNextEntry();
       while (entry != null) {
@@ -232,8 +222,8 @@ public class OBSCrowdinHelper {
           file.mkdirs();
         } else {
           FileOutputStream entryFos = new FileOutputStream(file);
-          while ((read = zipIn.read(buffer, 0, buffer.length)) != -1) {
-            entryFos.write(buffer, 0, read);
+          while ((read = zipIn.read(readBuffer, 0, readBuffer.length)) != -1) {
+            entryFos.write(readBuffer, 0, read);
           }
           entryFos.flush();
           entryFos.close();
@@ -257,6 +247,13 @@ public class OBSCrowdinHelper {
       frame.jButton.setEnabled(true);
       frame.waitForButtonPress();
     } catch (Exception e) {
+      error(e);
+    }
+    System.exit(0);
+  }
+
+  public static void error(Exception e) {
+    try {
       File errorFile = new File(root, "Error-" + new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")
           .format(new Timestamp((System.currentTimeMillis()))) + ".txt");
       FileWriter fw = new FileWriter(errorFile);
@@ -266,17 +263,18 @@ public class OBSCrowdinHelper {
       pw.close();
       JOptionPane.showMessageDialog(frame,
           "An unexpected error occurred and the program needs to be closed.\n\n"
-              + "The error file '"+errorFile.getName()+"' was created.\n",
+              + "The error file '" + errorFile.getName() + "' was created.",
           "An error occurred",
           JOptionPane.WARNING_MESSAGE);
+    } catch (Exception e2) {
+      e2.printStackTrace();
     }
-    System.exit(0);
   }
 
   private static boolean isAccountOkay() {
-    if (new CrowdinRequest().setPath("user").setRequestMethod(CrowdinRequestMethod.GET).send()
+    if (new CrowdinRequest().setPath("/user").setRequestMethod(CrowdinRequestMethod.GET).send()
         .code == 200) {
-      boolean accountOkay = ((JSONObject) new CrowdinRequest().setPath("projects/" + PROJECT_ID)
+      boolean accountOkay = ((JSONObject) new CrowdinRequest().setPath("")
           .setRequestMethod(CrowdinRequestMethod.GET).send().body.get("data"))
           .containsKey("translateDuplicates");
       if (accountOkay) {
@@ -302,37 +300,5 @@ public class OBSCrowdinHelper {
 
   private static void status(String status) {
     frame.setTitle("OBSCrowdinHelper: " + status);
-  }
-}
-
-class MyFrame extends JFrame {
-
-  final JPasswordField jPasswordField = new JPasswordField(20);
-  final JButton jButton = new JButton();
-  private final Thread currentThread = Thread.currentThread();
-
-  public MyFrame() {
-    setTitle("OBSCrowdinHelper");
-    setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    Dimension minSize = new Dimension(600, 100);
-    setSize(minSize);
-    setMinimumSize(minSize);
-    JPanel panel = new JPanel();
-    panel.add(new JLabel("Personal Access Token:"));
-    panel.add(jPasswordField);
-    panel.add(jButton);
-    getContentPane().add(panel);
-    setVisible(true);
-  }
-
-  void waitForButtonPress() throws Exception {
-    new Thread(() -> this.jButton.addActionListener(e -> {
-      synchronized (currentThread) {
-        currentThread.notify();
-      }
-    })).start();
-    synchronized (currentThread) {
-      currentThread.wait();
-    }
   }
 }
