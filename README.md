@@ -6,7 +6,7 @@ OBSCrowdinHelper is an easy-to-use Java tool to help keep [OBS Studio](https://g
 
 ### Features
 
-- Automatically build the project.
+- Build the project.
 - Download the newest translations.
 - Sort out empty files.
 - Generate a formatted and sorted `AUTHORS` file containing all Git contributors and translators.
