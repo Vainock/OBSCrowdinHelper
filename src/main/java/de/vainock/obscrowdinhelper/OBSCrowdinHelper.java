@@ -2,7 +2,6 @@ package de.vainock.obscrowdinhelper;
 
 import de.vainock.obscrowdinhelper.crowdin.CrowdinRequest;
 import de.vainock.obscrowdinhelper.crowdin.CrowdinRequestMethod;
-import de.vainock.obscrowdinhelper.crowdin.CrowdinResponse;
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -108,59 +107,42 @@ public class OBSCrowdinHelper {
         }
       }
 
-      // project languages
-      status("Generating top member reports");
-      List<CrowdinRequest> requests = new ArrayList<>();
-      for (Object lang : (JSONArray) ((JSONObject) new CrowdinRequest()
-          .setPath("")
-          .setRequestMethod(CrowdinRequestMethod.GET).send().body.get("data"))
-          .get("targetLanguageIds")) {
-
-        // generate reports
+      // generate and read report
+      Map<String, List<String>> topMembers = new HashMap<>();
+      {
+        status("Generating top member report");
         JSONObject body = new JSONObject();
         body.put("name", "top-members");
         JSONObject schema = new JSONObject();
         schema.put("unit", "words");
-        schema.put("languageId", lang);
         schema.put("format", "json");
         schema.put("dateFrom", "2014-01-01T00:00:00+00:00");
         schema.put("dateTo", "2030-01-01T00:00:00+00:00");
         body.put("schema", schema);
-        requests.add(new CrowdinRequest().setRequestMethod(CrowdinRequestMethod.POST)
-            .setPath("reports").setBody(body));
-      }
-      CrowdinRequest.send(requests, false);
-      status("Waiting for top member reports to generate");
-      Thread.sleep(10000);
-
-      // download and read reports
-      status("Downloading top member reports");
-      requests.clear();
-      for (CrowdinResponse response : CrowdinResponse.getResponses(true)) {
-        requests.add(new CrowdinRequest().setRequestMethod(CrowdinRequestMethod.GET).setPath(
-            "reports/" + ((JSONObject) response.body.get("data"))
-                .get("identifier") + "/download"));
-      }
-      Map<String, List<String>> topMembers = new HashMap<>();
-      for (CrowdinResponse response : CrowdinRequest.send(requests, true)) {
-        JSONObject report = new CrowdinRequest()
-            .setUrl(((JSONObject) response.body.get("data")).get("url").toString())
-            .setRequestMethod(CrowdinRequestMethod.GET).send().body;
-        List<String> users = new ArrayList<>();
-        JSONArray members = (JSONArray) report.get("data");
-        if (members == null) {
-          continue;
-        }
-        for (Object member : members) {
-          String username =
-              ((JSONObject) ((JSONObject) member).get("user")).get("fullName").toString();
+        for (Object obj : (JSONArray) new CrowdinRequest()
+            .setRequestMethod(CrowdinRequestMethod.GET).setUrl(((JSONObject) new CrowdinRequest()
+                .setRequestMethod(CrowdinRequestMethod.GET)
+                .setPath("reports/" + ((JSONObject) new CrowdinRequest()
+                    .setRequestMethod(CrowdinRequestMethod.POST).setPath("reports").setBody(body)
+                    .send().body.get("data")).get("identifier").toString() + "/download")
+                .setDelay(3000).send().body.get("data")).get("url").toString()).send().body
+            .get("data")) {
+          JSONObject dataEntry = (JSONObject) obj;
+          String username = ((JSONObject) dataEntry.get("user")).get("fullName").toString();
           if (username.equals("REMOVED_USER")) {
             continue;
           }
-          users.add(username);
-        }
-        if (users.size() != 0) {
-          topMembers.put(((JSONObject) report.get("language")).get("name").toString(), users);
+          for (Object langObj : (JSONArray) dataEntry.get("languages")) {
+            String languageName = ((JSONObject) langObj).get("name").toString();
+            List<String> members;
+            if (topMembers.containsKey(languageName)) {
+              members = topMembers.get(languageName);
+            } else {
+              members = new ArrayList<>();
+            }
+            members.add(username);
+            topMembers.put(languageName, members);
+          }
         }
       }
 
@@ -188,14 +170,13 @@ public class OBSCrowdinHelper {
           .setRequestMethod(CrowdinRequestMethod.POST).setBody(body).send().body
           .get("data")).get("id");
       while (true) {
-        JSONObject bodyData = (JSONObject) new CrowdinRequest().setPath(
+        JSONObject bodyData = (JSONObject) new CrowdinRequest().setDelay(1000).setPath(
             "translations/builds/" + buildId)
             .setRequestMethod(CrowdinRequestMethod.GET).send()
             .body.get("data");
         if (bodyData.get("status").equals("finished")) {
           break;
         }
-        Thread.sleep(1000);
       }
 
       // download build
