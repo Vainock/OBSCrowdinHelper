@@ -3,6 +3,7 @@ package de.vainock.obscrowdinhelper;
 import de.vainock.obscrowdinhelper.crowdin.CrowdinRequest;
 import de.vainock.obscrowdinhelper.crowdin.CrowdinRequestMethod;
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -10,6 +11,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
@@ -25,6 +27,7 @@ import java.util.Objects;
 import java.util.TreeSet;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -102,7 +105,7 @@ public class OBSCrowdinHelper {
       frame.jButton.setEnabled(false);
       status("Removing previous files");
       for (File file : Objects.requireNonNull(root.listFiles())) {
-        if (file.getName().equals("Translators.txt") || file.getName().equals("Translations")) {
+        if (file.getName().equals("AUTHORS") || file.getName().equals("Translations")) {
           deleteFile(file);
         }
       }
@@ -146,19 +149,59 @@ public class OBSCrowdinHelper {
         }
       }
 
-      // generate and save Translators.txt
+      String contributors = "";
+      // gettings git contributors
       {
-        Writer translatorsWriter = new BufferedWriter(new OutputStreamWriter(
-            new FileOutputStream(new File(root, "Translators.txt")), StandardCharsets.UTF_8));
-        translatorsWriter.append("Translators:\n");
+        status("Getting git contributors");
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Open the .git directory");
+        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        fileChooser.setAcceptAllFileFilterUsed(false);
+        frame.jButton.setText("Select Directory");
+        frame.jButton.setEnabled(true);
+        File selectedFile;
+        while (true) {
+          frame.waitForButtonPress();
+          if (fileChooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION && fileChooser
+              .getSelectedFile().getName().equals(".git")) {
+            selectedFile = fileChooser.getSelectedFile();
+            break;
+          }
+          status("Wrong directory, try again");
+        }
+        frame.jButton.setEnabled(false);
+        frame.jButton.setText("Executing");
+        Process process = new ProcessBuilder().directory(selectedFile.getParentFile())
+            .command("git", "shortlog", "--all", "-sn", "--no-merges")
+            .start();
+        BufferedReader reader = new BufferedReader(
+            new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
+        String line;
+        StringBuilder sb = new StringBuilder();
+        while ((line = reader.readLine()) != null) {
+          sb.append(' ').append(line.substring(line.indexOf('\t') + 1)).append('\n');
+        }
+        reader.close();
+        contributors = sb.toString();
+      }
+
+      // generate and save AUTHORS file
+      {
+        Writer authorsWriter = new BufferedWriter(new OutputStreamWriter(
+            new FileOutputStream(new File(root, "AUTHORS")), StandardCharsets.UTF_8));
+        authorsWriter.append(
+            "Original Author: Hugh Bailey (\"Jim\")\n\nContributors are sorted by their amount of commits / translated words.\n\nContributors:\n");
+        authorsWriter.append(contributors);
+        authorsWriter.flush();
+        authorsWriter.append("\nTranslators:\n");
         for (String lang : new TreeSet<>(topMembers.keySet())) {
-          translatorsWriter.append(' ').append(lang).append(":\n");
+          authorsWriter.append(' ').append(lang).append(":\n");
           for (String username : topMembers.get(lang)) {
-            translatorsWriter.append("  - ").append(username).append('\n');
+            authorsWriter.append("  ").append(username).append('\n');
           }
         }
-        translatorsWriter.flush();
-        translatorsWriter.close();
+        authorsWriter.flush();
+        authorsWriter.close();
       }
 
       // build project
