@@ -22,10 +22,6 @@ public class CrowdinRequest implements Runnable {
   private CrowdinRequestMethod method;
   private CrowdinResponse response;
 
-  public CrowdinRequest() {
-
-  }
-
   public static void setToken(String token) {
     CrowdinRequest.token = token;
   }
