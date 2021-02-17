@@ -149,6 +149,13 @@ public class OBSCrowdinHelper {
         reader.close();
         authorsWriter.flush();
 
+        // get blocked users
+        List<String> blockedUsers = new ArrayList<>();
+        for (Object obj : (JSONArray) new CrowdinRequest().setPath("members?role=blocked")
+            .setRequestMethod(CrowdinRequestMethod.GET).send().body.get("data")) {
+          blockedUsers.add(((JSONObject) ((JSONObject) obj).get("data")).get("id").toString());
+        }
+
         // generate and parse top member report
         status("Generating top member report");
         JSONObject body = new JSONObject();
@@ -166,11 +173,13 @@ public class OBSCrowdinHelper {
                 .setPath("reports/" + ((JSONObject) new CrowdinRequest()
                     .setRequestMethod(CrowdinRequestMethod.POST).setPath("reports").setBody(body)
                     .send().body.get("data")).get("identifier").toString() + "/download")
-                .setDelay(3000).send().body.get("data")).get("url").toString()).send().body
+                .setDelay(7500).send().body.get("data")).get("url").toString()).send().body
             .get("data")) {
           JSONObject dataEntry = (JSONObject) obj;
-          String username = ((JSONObject) dataEntry.get("user")).get("fullName").toString();
-          if (username.equals("REMOVED_USER")) {
+          JSONObject userEntry = (JSONObject) dataEntry.get("user");
+          String username = userEntry.get("fullName").toString();
+          if (username.equals("REMOVED_USER") || blockedUsers
+              .contains(userEntry.get("id").toString())) {
             continue;
           }
           for (Object langObj : (JSONArray) dataEntry.get("languages")) {
