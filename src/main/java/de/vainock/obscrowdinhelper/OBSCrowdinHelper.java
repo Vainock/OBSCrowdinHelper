@@ -110,48 +110,14 @@ public class OBSCrowdinHelper {
         }
       }
 
-      // generate and read report
-      Map<String, List<String>> topMembers = new HashMap<>();
+      // AUTHORS file
       {
-        status("Generating top member report");
-        JSONObject body = new JSONObject();
-        body.put("name", "top-members");
-        JSONObject schema = new JSONObject();
-        schema.put("unit", "words");
-        schema.put("format", "json");
-        schema.put("dateFrom", "2014-01-01T00:00:00+00:00");
-        schema.put("dateTo", "2030-01-01T00:00:00+00:00");
-        body.put("schema", schema);
-        for (Object obj : (JSONArray) new CrowdinRequest()
-            .setRequestMethod(CrowdinRequestMethod.GET).setUrl(((JSONObject) new CrowdinRequest()
-                .setRequestMethod(CrowdinRequestMethod.GET)
-                .setPath("reports/" + ((JSONObject) new CrowdinRequest()
-                    .setRequestMethod(CrowdinRequestMethod.POST).setPath("reports").setBody(body)
-                    .send().body.get("data")).get("identifier").toString() + "/download")
-                .setDelay(3000).send().body.get("data")).get("url").toString()).send().body
-            .get("data")) {
-          JSONObject dataEntry = (JSONObject) obj;
-          String username = ((JSONObject) dataEntry.get("user")).get("fullName").toString();
-          if (username.equals("REMOVED_USER")) {
-            continue;
-          }
-          for (Object langObj : (JSONArray) dataEntry.get("languages")) {
-            String languageName = ((JSONObject) langObj).get("name").toString();
-            List<String> members;
-            if (topMembers.containsKey(languageName)) {
-              members = topMembers.get(languageName);
-            } else {
-              members = new ArrayList<>();
-            }
-            members.add(username);
-            topMembers.put(languageName, members);
-          }
-        }
-      }
-
-      String contributors = "";
-      // gettings git contributors
-      {
+        Writer authorsWriter = new BufferedWriter(new OutputStreamWriter(
+            new FileOutputStream(new File(root, "AUTHORS")), StandardCharsets.UTF_8));
+        authorsWriter.append(
+            "Original Author: Hugh Bailey (\"Jim\")\n\nContributors are sorted by their amount of commits / translated words.\n\nContributors:\n");
+        authorsWriter.flush();
+        // get git contributors
         status("Getting git contributors");
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Open the .git directory");
@@ -177,22 +143,50 @@ public class OBSCrowdinHelper {
         BufferedReader reader = new BufferedReader(
             new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
         String line;
-        StringBuilder sb = new StringBuilder();
         while ((line = reader.readLine()) != null) {
-          sb.append(' ').append(line.substring(line.indexOf('\t') + 1)).append('\n');
+          authorsWriter.append(' ').append(line.substring(line.indexOf('\t') + 1)).append('\n');
         }
         reader.close();
-        contributors = sb.toString();
-      }
-
-      // generate and save AUTHORS file
-      {
-        Writer authorsWriter = new BufferedWriter(new OutputStreamWriter(
-            new FileOutputStream(new File(root, "AUTHORS")), StandardCharsets.UTF_8));
-        authorsWriter.append(
-            "Original Author: Hugh Bailey (\"Jim\")\n\nContributors are sorted by their amount of commits / translated words.\n\nContributors:\n");
-        authorsWriter.append(contributors);
         authorsWriter.flush();
+
+        // generate and parse top member report
+        status("Generating top member report");
+        JSONObject body = new JSONObject();
+        body.put("name", "top-members");
+        JSONObject schema = new JSONObject();
+        schema.put("unit", "words");
+        schema.put("format", "json");
+        schema.put("dateFrom", "2014-01-01T00:00:00+00:00");
+        schema.put("dateTo", "2030-01-01T00:00:00+00:00");
+        body.put("schema", schema);
+        Map<String, List<String>> topMembers = new HashMap<>();
+        for (Object obj : (JSONArray) new CrowdinRequest()
+            .setRequestMethod(CrowdinRequestMethod.GET).setUrl(((JSONObject) new CrowdinRequest()
+                .setRequestMethod(CrowdinRequestMethod.GET)
+                .setPath("reports/" + ((JSONObject) new CrowdinRequest()
+                    .setRequestMethod(CrowdinRequestMethod.POST).setPath("reports").setBody(body)
+                    .send().body.get("data")).get("identifier").toString() + "/download")
+                .setDelay(3000).send().body.get("data")).get("url").toString()).send().body
+            .get("data")) {
+          JSONObject dataEntry = (JSONObject) obj;
+          String username = ((JSONObject) dataEntry.get("user")).get("fullName").toString();
+          if (username.equals("REMOVED_USER")) {
+            continue;
+          }
+          for (Object langObj : (JSONArray) dataEntry.get("languages")) {
+            String languageName = ((JSONObject) langObj).get("name").toString();
+            List<String> members;
+            if (topMembers.containsKey(languageName)) {
+              members = topMembers.get(languageName);
+            } else {
+              members = new ArrayList<>();
+            }
+            members.add(username);
+            topMembers.put(languageName, members);
+          }
+        }
+
+        // save file
         authorsWriter.append("\nTranslators:\n");
         for (String lang : new TreeSet<>(topMembers.keySet())) {
           authorsWriter.append(' ').append(lang).append(":\n");
