@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,64 +38,67 @@ public class OBSCrowdinHelper {
   private static final MyFrame frame = new MyFrame();
   private static final File root = new File(new File("").getAbsolutePath());
 
+  // valid args: --skip-build, --skip-authors
   public static void main(String[] args) {
     try {
       // authentication
-      boolean run = true;
       int read;
-      File tokenFile = new File(root, "Token.txt");
-      if (tokenFile.exists()) {
-        status("Checking saved token");
-        frame.jButton.setEnabled(false);
-        frame.jPasswordField.setEnabled(false);
-        frame.jButton.setText("Checking Token");
-        FileReader tokenFr = new FileReader(tokenFile);
-        StringBuilder tokenSb = new StringBuilder();
-        while ((read = tokenFr.read()) != -1) {
-          tokenSb.append(Character.valueOf((char) read));
-        }
-        tokenFr.close();
-        frame.jPasswordField.setText(tokenSb.toString());
-        CrowdinRequest.setToken(tokenSb.toString());
+      {
+        boolean run = true;
+        File tokenFile = new File(root, "Token.txt");
+        if (tokenFile.exists()) {
+          status("Checking saved token");
+          frame.jButton.setEnabled(false);
+          frame.jPasswordField.setEnabled(false);
+          frame.jButton.setText("Checking Token");
+          FileReader tokenFr = new FileReader(tokenFile);
+          StringBuilder tokenSb = new StringBuilder();
+          while ((read = tokenFr.read()) != -1) {
+            tokenSb.append(Character.valueOf((char) read));
+          }
+          tokenFr.close();
+          frame.jPasswordField.setText(tokenSb.toString());
+          CrowdinRequest.setToken(tokenSb.toString());
 
-        if (isAccountOkay()) {
-          run = false;
-          frame.jButton.setEnabled(true);
-          frame.jButton.setText("Collect Data");
-        } else {
-          tokenFile.delete();
-          frame.jButton.setEnabled(true);
-          frame.jPasswordField.setEnabled(true);
-          frame.jPasswordField.setText("");
+          if (isAccountOkay()) {
+            run = false;
+            frame.jButton.setEnabled(true);
+            frame.jButton.setText("Collect Data");
+          } else {
+            tokenFile.delete();
+            frame.jButton.setEnabled(true);
+            frame.jPasswordField.setEnabled(true);
+            frame.jPasswordField.setText("");
+            frame.jButton.setText("Check Token");
+            status("Saved token invalid");
+          }
+        }
+
+        while (run) {
           frame.jButton.setText("Check Token");
-          status("Saved token invalid");
+          frame.waitForButtonPress();
+          String token = new String(frame.jPasswordField.getPassword());
+          CrowdinRequest.setToken(token);
+          status("Checking entered token");
+          frame.jPasswordField.setEnabled(false);
+          frame.jButton.setEnabled(false);
+          frame.jButton.setText("Checking Token");
+          if (isAccountOkay()) {
+            run = false;
+            FileOutputStream tokenFos = new FileOutputStream(tokenFile);
+            tokenFos.write(token.getBytes());
+            tokenFos.flush();
+            tokenFos.close();
+          } else {
+            JOptionPane.showMessageDialog(frame,
+                "This token seems to be invalid or the account isn't project manager or higher.",
+                "Token invalid", JOptionPane.INFORMATION_MESSAGE);
+            status("Token invalid");
+            frame.jPasswordField.setText("");
+            frame.jPasswordField.setEnabled(true);
+          }
+          frame.jButton.setEnabled(true);
         }
-      }
-
-      while (run) {
-        frame.jButton.setText("Check Token");
-        frame.waitForButtonPress();
-        String token = new String(frame.jPasswordField.getPassword());
-        CrowdinRequest.setToken(token);
-        status("Checking entered token");
-        frame.jPasswordField.setEnabled(false);
-        frame.jButton.setEnabled(false);
-        frame.jButton.setText("Checking Token");
-        if (isAccountOkay()) {
-          run = false;
-          FileOutputStream tokenFos = new FileOutputStream(tokenFile);
-          tokenFos.write(token.getBytes());
-          tokenFos.flush();
-          tokenFos.close();
-        } else {
-          JOptionPane.showMessageDialog(frame,
-              "This token seems to be invalid or the account isn't project manager or higher.",
-              "Token invalid", JOptionPane.INFORMATION_MESSAGE);
-          status("Token invalid");
-          frame.jPasswordField.setText("");
-          frame.jPasswordField.setEnabled(true);
-        }
-        frame.jButton.setEnabled(true);
       }
 
       status("Waiting to collect data");
@@ -111,7 +115,7 @@ public class OBSCrowdinHelper {
       }
 
       // AUTHORS file
-      {
+      if (!Arrays.asList(args).contains("--skip-authors")) {
         Writer authorsWriter = new BufferedWriter(new OutputStreamWriter(
             new FileOutputStream(new File(root, "AUTHORS")), StandardCharsets.UTF_8));
         authorsWriter.append(
@@ -208,28 +212,36 @@ public class OBSCrowdinHelper {
       }
 
       // build project
-      status("Building project");
-      JSONObject body = new JSONObject();
-      body.put("skipUntranslatedStrings", true);
-      long buildId = (long) ((JSONObject) new CrowdinRequest()
-          .setPath("translations/builds")
-          .setRequestMethod(CrowdinRequestMethod.POST).setBody(body).send().body
-          .get("data")).get("id");
-      while (true) {
-        JSONObject bodyData = (JSONObject) new CrowdinRequest().setDelay(1000).setPath(
-            "translations/builds/" + buildId)
-            .setRequestMethod(CrowdinRequestMethod.GET).send()
-            .body.get("data");
-        if (bodyData.get("status").equals("finished")) {
-          break;
+      long newestBuildId;
+      if (!Arrays.asList(args).contains("--skip-build")) {
+        status("Building project");
+        JSONObject body = new JSONObject();
+        body.put("skipUntranslatedStrings", true);
+        newestBuildId = (long) ((JSONObject) new CrowdinRequest()
+            .setPath("translations/builds")
+            .setRequestMethod(CrowdinRequestMethod.POST).setBody(body).send().body
+            .get("data")).get("id");
+        while (true) {
+          JSONObject bodyData = (JSONObject) new CrowdinRequest().setDelay(1000).setPath(
+              "translations/builds/" + newestBuildId)
+              .setRequestMethod(CrowdinRequestMethod.GET).send()
+              .body.get("data");
+          if (bodyData.get("status").equals("finished")) {
+            break;
+          }
         }
+      } else {
+        status("Getting newest build");
+        newestBuildId = (long) ((JSONObject) ((JSONObject) ((JSONArray) new CrowdinRequest()
+            .setPath("translations/builds").setRequestMethod(CrowdinRequestMethod.GET).send().body
+            .get("data")).get(0)).get("data")).get("id");
       }
 
       // download build
-      status("Downloading newest build (may take minutes)");
+      status("Downloading newest build");
       BufferedInputStream input = new BufferedInputStream(
           new URL(((JSONObject) new CrowdinRequest().setRequestMethod(CrowdinRequestMethod.GET)
-              .setPath("translations/builds/" + buildId + "/download")
+              .setPath("translations/builds/" + newestBuildId + "/download")
               .send()
               .body.get("data")).get("url").toString())
               .openStream());
