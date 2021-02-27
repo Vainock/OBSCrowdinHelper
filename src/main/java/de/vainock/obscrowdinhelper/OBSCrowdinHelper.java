@@ -127,6 +127,7 @@ public class OBSCrowdinHelper {
 				fileChooser.setDialogTitle("Open the .git directory");
 				fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				fileChooser.setAcceptAllFileFilterUsed(false);
+				fileChooser.setFileHidingEnabled(false);
 				frame.jButton.setText("Select Directory");
 				frame.jButton.setEnabled(true);
 				File selectedFile;
