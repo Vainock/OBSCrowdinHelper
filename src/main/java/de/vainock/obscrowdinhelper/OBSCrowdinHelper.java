@@ -38,9 +38,10 @@ public class OBSCrowdinHelper {
 	private static final MyFrame frame = new MyFrame();
 	private static final File root = new File(new File("").getAbsolutePath());
 
-	// valid args: --skip-build, --skip-authors
+	// valid args: --skip-build, --skip-authors, --skip-translators, --skip-git-contributors
 	public static void main(String[] args) {
 		try {
+			List<String> argsList = Arrays.asList(args);
 			// authentication
 			int read;
 			{
@@ -115,106 +116,118 @@ public class OBSCrowdinHelper {
 			}
 
 			// AUTHORS file
-			if (!Arrays.asList(args).contains("--skip-authors")) {
+			if (!(argsList.contains("--skip-authors")
+					|| argsList.contains("--skip-git-contributors") && argsList
+					.contains("--skip-translators"))) {
 				Writer authorsWriter = new BufferedWriter(new OutputStreamWriter(
 						new FileOutputStream(new File(root, "AUTHORS")), StandardCharsets.UTF_8));
-				authorsWriter.append(
-						"Original Author: Hugh Bailey (\"Jim\")\n\nContributors are sorted by their amount of commits / translated words.\n\nContributors:\n");
-				authorsWriter.flush();
-				// get git contributors
-				status("Getting git contributors");
-				JFileChooser fileChooser = new JFileChooser();
-				fileChooser.setDialogTitle("Open the .git directory");
-				fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-				fileChooser.setAcceptAllFileFilterUsed(false);
-				fileChooser.setFileHidingEnabled(false);
-				frame.jButton.setText("Select Directory");
-				frame.jButton.setEnabled(true);
-				File selectedFile;
-				while (true) {
-					frame.waitForButtonPress();
-					if (fileChooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION && fileChooser
-							.getSelectedFile().getName().equals(".git")) {
-						selectedFile = fileChooser.getSelectedFile();
-						break;
-					}
-					status("Wrong directory, try again");
+				if (!argsList.contains("--skip-git-contributors") && !argsList
+						.contains("--skip-translators")) {
+					authorsWriter.append(
+							"Original Author: Hugh Bailey (\"Jim\")\n\nContributors are sorted by their amount of commits / translated words.\n\n");
+					authorsWriter.flush();
 				}
-				frame.jButton.setEnabled(false);
-				frame.jButton.setText("Executing");
-				Process process = new ProcessBuilder().directory(selectedFile.getParentFile())
-						.command("git", "shortlog", "--all", "-sn", "--no-merges")
-						.start();
-				BufferedReader reader = new BufferedReader(
-						new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
-				String line;
-				while ((line = reader.readLine()) != null) {
-					authorsWriter.append(' ').append(line.substring(line.indexOf('\t') + 1)).append('\n');
-				}
-				reader.close();
-				authorsWriter.flush();
-
-				// get blocked users
-				List<String> blockedUsers = new ArrayList<>();
-				for (Object obj : (JSONArray) new CrowdinRequest().setPath("members?role=blocked")
-						.setRequestMethod(CrowdinRequestMethod.GET).send().body.get("data")) {
-					blockedUsers.add(((JSONObject) ((JSONObject) obj).get("data")).get("id").toString());
-				}
-
-				// generate and parse top member report
-				status("Generating top member report");
-				JSONObject body = new JSONObject();
-				body.put("name", "top-members");
-				JSONObject schema = new JSONObject();
-				schema.put("unit", "words");
-				schema.put("format", "json");
-				schema.put("dateFrom", "2014-01-01T00:00:00+00:00");
-				schema.put("dateTo", "2030-01-01T00:00:00+00:00");
-				body.put("schema", schema);
-				Map<String, List<String>> topMembers = new HashMap<>();
-				for (Object obj : (JSONArray) new CrowdinRequest()
-						.setRequestMethod(CrowdinRequestMethod.GET).setUrl(((JSONObject) new CrowdinRequest()
-								.setRequestMethod(CrowdinRequestMethod.GET)
-								.setPath("reports/" + ((JSONObject) new CrowdinRequest()
-										.setRequestMethod(CrowdinRequestMethod.POST).setPath("reports").setBody(body)
-										.send().body.get("data")).get("identifier").toString() + "/download")
-								.setDelay(7500).send().body.get("data")).get("url").toString()).send().body
-						.get("data")) {
-					JSONObject dataEntry = (JSONObject) obj;
-					JSONObject userEntry = (JSONObject) dataEntry.get("user");
-					String username = userEntry.get("fullName").toString();
-					if (username.equals("REMOVED_USER") || blockedUsers
-							.contains(userEntry.get("id").toString())) {
-						continue;
-					}
-					for (Object langObj : (JSONArray) dataEntry.get("languages")) {
-						String languageName = ((JSONObject) langObj).get("name").toString();
-						List<String> members;
-						if (topMembers.containsKey(languageName)) {
-							members = topMembers.get(languageName);
-						} else {
-							members = new ArrayList<>();
+				// git contributors
+				if (!argsList.contains("--skip-git-contributors")) {
+					authorsWriter.append("Contributors:\n");
+					authorsWriter.flush();
+					status("Getting git contributors");
+					JFileChooser fileChooser = new JFileChooser();
+					fileChooser.setDialogTitle("Open the .git directory");
+					fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					fileChooser.setAcceptAllFileFilterUsed(false);
+					fileChooser.setFileHidingEnabled(false);
+					frame.jButton.setText("Select Directory");
+					frame.jButton.setEnabled(true);
+					File selectedFile;
+					while (true) {
+						frame.waitForButtonPress();
+						if (fileChooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION && fileChooser
+								.getSelectedFile().getName().equals(".git")) {
+							selectedFile = fileChooser.getSelectedFile();
+							break;
 						}
-						members.add(username);
-						topMembers.put(languageName, members);
+						status("Wrong directory, try again");
 					}
+					frame.jButton.setEnabled(false);
+					frame.jButton.setText("Executing");
+					Process process = new ProcessBuilder().directory(selectedFile.getParentFile())
+							.command("git", "shortlog", "--all", "-sn", "--no-merges")
+							.start();
+					BufferedReader reader = new BufferedReader(
+							new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
+					String line;
+					while ((line = reader.readLine()) != null) {
+						authorsWriter.append(' ').append(line.substring(line.indexOf('\t') + 1)).append('\n');
+					}
+					reader.close();
+					authorsWriter.append('\n');
+					authorsWriter.flush();
 				}
 
-				// save file
-				authorsWriter.append("\nTranslators:\n");
-				for (String lang : new TreeSet<>(topMembers.keySet())) {
-					authorsWriter.append(' ').append(lang).append(":\n");
-					for (String username : topMembers.get(lang)) {
-						authorsWriter.append("  ").append(username).append('\n');
+				if (!argsList.contains("--skip-translators")) {
+					// get blocked users
+					List<String> blockedUsers = new ArrayList<>();
+					for (Object obj : (JSONArray) new CrowdinRequest().setPath("members?role=blocked")
+							.setRequestMethod(CrowdinRequestMethod.GET).send().body.get("data")) {
+						blockedUsers.add(((JSONObject) ((JSONObject) obj).get("data")).get("id").toString());
 					}
+
+					// generate and parse top member report
+					status("Generating top member report");
+					JSONObject body = new JSONObject();
+					body.put("name", "top-members");
+					JSONObject schema = new JSONObject();
+					schema.put("unit", "words");
+					schema.put("format", "json");
+					schema.put("dateFrom", "2014-01-01T00:00:00+00:00");
+					schema.put("dateTo", "2030-01-01T00:00:00+00:00");
+					body.put("schema", schema);
+					Map<String, List<String>> topMembers = new HashMap<>();
+					for (Object obj : (JSONArray) new CrowdinRequest()
+							.setRequestMethod(CrowdinRequestMethod.GET).setUrl(((JSONObject) new CrowdinRequest()
+									.setRequestMethod(CrowdinRequestMethod.GET)
+									.setPath("reports/" + ((JSONObject) new CrowdinRequest()
+											.setRequestMethod(CrowdinRequestMethod.POST).setPath("reports").setBody(body)
+											.send().body.get("data")).get("identifier").toString() + "/download")
+									.setDelay(7500).send().body.get("data")).get("url").toString()).send().body
+							.get("data")) {
+						JSONObject dataEntry = (JSONObject) obj;
+						JSONObject userEntry = (JSONObject) dataEntry.get("user");
+						String username = userEntry.get("fullName").toString();
+						if (username.equals("REMOVED_USER") || blockedUsers
+								.contains(userEntry.get("id").toString())) {
+							continue;
+						}
+						for (Object langObj : (JSONArray) dataEntry.get("languages")) {
+							String languageName = ((JSONObject) langObj).get("name").toString();
+							List<String> members;
+							if (topMembers.containsKey(languageName)) {
+								members = topMembers.get(languageName);
+							} else {
+								members = new ArrayList<>();
+							}
+							members.add(username);
+							topMembers.put(languageName, members);
+						}
+					}
+
+					// translators
+					authorsWriter.append("Translators:\n");
+					for (String lang : new TreeSet<>(topMembers.keySet())) {
+						authorsWriter.append(' ').append(lang).append(":\n");
+						for (String username : topMembers.get(lang)) {
+							authorsWriter.append("  ").append(username).append('\n');
+						}
+					}
+					authorsWriter.flush();
 				}
-				authorsWriter.flush();
 				authorsWriter.close();
 			}
 
 			// build project
 			long newestBuildId;
-			if (!Arrays.asList(args).contains("--skip-build")) {
+			if (!argsList.contains("--skip-build")) {
 				status("Building project");
 				JSONObject body = new JSONObject();
 				body.put("skipUntranslatedStrings", true);

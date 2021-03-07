@@ -12,7 +12,9 @@ OBSCrowdinHelper is an easy-to-use Java tool to help keep [OBS Studio](https://g
 - Generate a formatted and sorted `AUTHORS` file containing all Git contributors and translators.
 - Supported command line arguments:
   - `--skip-build`: Skips the build creation, but still downloads the newest build.
-  - `--skip-authors`: Skips generating the AUTHORS file.
+  - `--skip-authors`: Skips the AUTHORS file.
+    - `--skip-git-contributors`: Skips the Git contributors.
+    - `--skip-translators`: Skips the translators.
 
 ### Requirements
 
